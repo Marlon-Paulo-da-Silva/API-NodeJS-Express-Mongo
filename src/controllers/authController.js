@@ -1,5 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const authConfig = require("../config/auth");
 
 const User = require("../models/User");
 
@@ -17,11 +20,18 @@ router.post("/register", async (req, res) => {
 
     user.password = undefined;
 
-    return res.send({ user });
+    return res.send({ user, token: generateToken({ id: user.id }) });
   } catch (error) {
     return res.status(400).send({ error: "Falha no registro" });
   }
 });
+
+//gerar token
+function generateToken(params = {}) {
+  return jwt.sign(params, authConfig.secret, {
+    expiresIn: 86400
+  });
+}
 
 //rota autenticar
 router.post("/authenticate", async (req, res) => {
@@ -36,7 +46,7 @@ router.post("/authenticate", async (req, res) => {
 
   user.password = undefined;
 
-  res.send({ user });
+  res.send({ user, token: generateToken({ id: user.id }) });
 });
 
 //todas as rotas definidas aqui serao prefixadas no auth
