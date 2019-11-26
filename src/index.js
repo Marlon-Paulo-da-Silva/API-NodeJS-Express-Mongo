@@ -9,9 +9,6 @@ app.use(bodyParser.json());
 //entender quando passar parametros via url
 app.use(bodyParser.urlencoded({ extended: false }));
 
-//recebe sempre o req e res
-app.get("/", (req, res) => {
-  res.send("ok");
-});
+require("./controllers/authController")(app);
 
 app.listen(3000);
