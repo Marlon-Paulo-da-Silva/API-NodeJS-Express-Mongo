@@ -1,6 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const mailer = require("../../modules/mailer.js");
 
 const authConfig = require("../../config/auth.json");
 
@@ -49,5 +51,54 @@ router.post("/authenticate", async (req, res) => {
   res.send({ user, token: generateToken({ id: user.id }) });
 });
 
+router.post("/forgot_password", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(400).send({ erro: "Usuario nao encontrado" });
+
+    const token = crypto.randomBytes(20).toString("hex");
+
+    const now = new Date();
+
+    now.setHours(now.getHours() + 1);
+
+    await User.findByIdAndUpdate(
+      user.id,
+      {
+        $set: {
+          passwordResetToken: token,
+          passwordResetExpires: now
+        }
+      },
+      { new: true, useFindAndModify: false }
+    );
+
+    mailer.sendMail(
+      {
+        to: email,
+        from: "marlon.pauloo@gmail.com",
+        template: "auth/forgot_password",
+        context: { token }
+      },
+      err => {
+        console.log(err);
+
+        if (err)
+          return res.status(400).send({
+            error: "Nao foi possivel enviar email de esqueci a senha"
+          });
+
+        return res.send();
+      }
+    );
+  } catch (error) {
+    res.status(400).send({ erro: "Erro no Esquecer senha, tente novamente" });
+
+    console.log(error);
+  }
+});
 //todas as rotas definidas aqui serao prefixadas no auth
 module.exports = app => app.use("/auth", router);
